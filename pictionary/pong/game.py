@@ -1,11 +1,8 @@
-from random import randint
-
 from kivy.properties import ObjectProperty
 from kivy.uix.widget import Widget
-from kivy.vector import Vector
 
-from pictionary.pong import PongBall
-from pictionary.pong.paddle import PongPaddle
+from .ball import PongBall
+from .paddle import PongPaddle
 
 
 class PongGame(Widget):

@@ -2,7 +2,7 @@ from kivy.properties import NumericProperty
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
 
-from pictionary.pong import PongBall
+from .ball import PongBall
 
 
 class PongPaddle(Widget):
