@@ -1,4 +1,5 @@
 # Taken from https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+import torch
 from torch import nn, flatten
 
 
@@ -47,3 +48,8 @@ class LeNet(nn.Module):
         output = self.logSoftmax(x)
         # return the output predictions
         return output
+
+    # Intended to be used for single images, but works with batches too
+    def classify(self, x):
+        prediction = self(x)
+        return prediction.argmax(axis=1)[0]
