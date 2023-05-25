@@ -1,5 +1,4 @@
 # Taken from https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
-import torch
 from torch import nn, flatten
 
 
