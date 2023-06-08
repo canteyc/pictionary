@@ -1,9 +1,10 @@
 # Taken from https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+import torch
 from torch import nn, flatten
 
 
 class LeNet(nn.Module):
-    def __init__(self, num_channels, classes):
+    def __init__(self, num_channels: int, num_classes: int):
         # call the parent constructor
         super(LeNet, self).__init__()
 
@@ -22,10 +23,10 @@ class LeNet(nn.Module):
         self.relu3 = nn.ReLU()
 
         # initialize our softmax classifier
-        self.fc2 = nn.Linear(in_features=500, out_features=classes)
+        self.fc2 = nn.Linear(in_features=500, out_features=num_classes)
         self.logSoftmax = nn.LogSoftmax(dim=1)
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         # pass the input through our first set of CONV => RELU =>
         # POOL layers
         x = self.conv1(x)
@@ -49,6 +50,6 @@ class LeNet(nn.Module):
         return output
 
     # Intended to be used for single images, but works with batches too
-    def classify(self, x):
+    def classify(self, x) -> torch.Tensor:
         prediction = self(x)
         return prediction.argmax(axis=1)[0]
