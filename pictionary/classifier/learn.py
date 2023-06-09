@@ -1,8 +1,9 @@
 from typing import List
 
 import torch
-from torch.utils.data import DataLoader, Dataset, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler, BatchSampler
 
+from .data import AppendableDataset
 from .model import LeNet
 
 
@@ -10,25 +11,19 @@ class ActiveLearner:
     def __init__(self, model: torch.nn.Module, class_labels: list[str]):
         self.model = model
         self.class_labels = class_labels
-        self.training_data: dict[str, DataLoader] = {class_: None for class_ in class_labels}
-        self.test_data: dict[str, DataLoader] = {class_: None for class_ in class_labels}
+        weights = []
+        batch_size = 1
+        self.training_data = DataLoader(AppendableDataset(), sampler=BatchSampler(WeightedRandomSampler(weights, batch_size), batch_size, False))
+        self.test_data = DataLoader(AppendableDataset())
 
         self._train_test_ratio = 4  # number of train samples vs test samples
 
     def add_image(self, image: torch.Tensor, label: str):
-        if label not in self.training_data:
-            raise KeyError(f"Label '{label}' not found in {self.training_data.keys()}")
-
         image = self.reshape(image)
-        single_image_dataset = TensorDataset(image, torch.tensor([label]))
-        if self.test_data[label] is None:
-            self.test_data[label] = DataLoader(single_image_dataset)
-        elif self.training_data[label] is None:
-            self.training_data[label] = DataLoader(single_image_dataset)
-        elif len(self.training_data[label].dataset) / len(self.test_data[label].dataset) < self._train_test_ratio:
-            self.training_data[label].dataset += single_image_dataset
+        if len(self.training_data.dataset) / len(self.test_data.dataset) < self._train_test_ratio:
+            self.training_data.dataset.append(image, label)
         else:
-            self.test_data[label].dataset += single_image_dataset
+            self.test_data.dataset.append(image, label)
 
     def classify(self, image: torch.Tensor) -> str:
         return self.class_labels[self.model.classify(self.reshape(image))]
