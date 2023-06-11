@@ -1,7 +1,7 @@
 from typing import List
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler, BatchSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, BatchSampler
 
 from .data import AppendableDataset
 from .model import LeNet
@@ -11,41 +11,47 @@ class ActiveLearner:
     def __init__(self, model: torch.nn.Module, class_labels: list[str]):
         self.model = model
         self.class_labels = class_labels
-        weights = []
         batch_size = 1
-        self.training_data = DataLoader(AppendableDataset(), sampler=BatchSampler(WeightedRandomSampler(weights, batch_size), batch_size, False))
+        weighted_sampler = WeightedRandomSampler([0.] * len(self.class_labels), batch_size)
+        self.weights = weighted_sampler.weights
+        self.training_data = DataLoader(AppendableDataset(), sampler=BatchSampler(weighted_sampler, batch_size, False))
         self.test_data = DataLoader(AppendableDataset())
 
         self._train_test_ratio = 4  # number of train samples vs test samples
 
     def add_image(self, image: torch.Tensor, label: str):
+        if label not in self.class_labels:
+            raise KeyError(f'{label} not in {self.class_labels}')
+
         image = self.reshape(image)
-        if len(self.training_data.dataset) / len(self.test_data.dataset) < self._train_test_ratio:
-            self.training_data.dataset.append(image, label)
-        else:
+        if len(self.test_data.dataset) == 0 or len(self.training_data.dataset) / len(self.test_data.dataset) > self._train_test_ratio:
             self.test_data.dataset.append(image, label)
+        else:
+            self.training_data.dataset.append(image, label)
 
     def classify(self, image: torch.Tensor) -> str:
-        return self.class_labels[self.model.classify(self.reshape(image))]
+        return self.class_labels[self.model.classify(image.unsqueeze(0))]
 
-    def accuracy(self) -> List[float]:
-        acc = [0.] * len(self.class_labels)
-        for key in self.test_data:
-            acc[int(key)] = self.class_accuracy(key)
-        return acc
-
-    def class_accuracy(self, label: str) -> float:
+    def accuracy(self, no_data_value=0) -> torch.Tensor:
+        count = torch.zeros(len(self.class_labels))
+        num_correct = torch.zeros_like(count)
         self.model.eval()
-        num_correct = 0
-        loader = self.test_data[label]
-        if loader is None:
-            return 0.
-
         with torch.no_grad():
-            for batch, answer in loader:
+            for batch, labels in self.test_data:
+                indices = torch.tensor([self.class_labels.index(label) for label in labels])
                 predictions = self.model.classify(batch)
-                num_correct += (predictions == answer).type(torch.float).sum().item()
-        return num_correct / len(loader.dataset)
+                num_correct[indices] += predictions.item() == self.class_labels.index(labels[0])
+                count[indices] += 1
+        return torch.nan_to_num(num_correct / count, no_data_value)
+
+    def _reset_training_sampler(self):
+        accuracy = self.accuracy(no_data_value=1)
+        self.weights[:] = 1. - accuracy
+
+    def train(self):
+        self._reset_training_sampler()
+
+        self.model.train()
 
 
     @staticmethod
@@ -54,6 +60,6 @@ class ActiveLearner:
 
     @staticmethod
     def reshape(image: torch.Tensor) -> torch.Tensor:
-        while len(image.shape) < 4:
+        if len(image.shape) < 3:
             image = image.unsqueeze(0)
         return image
