@@ -29,7 +29,7 @@ class TestBucketDataset(unittest.TestCase):
         dataset.append(torch.Tensor(()), 'c')
         dataset.append(torch.Tensor(()), 'c')
 
-        self.assertEqual(len(dataset), 9)
+        self.assertEqual(len(dataset), 3)
 
 
 class TestWeightedDataLoader(unittest.TestCase):
@@ -48,33 +48,34 @@ class TestWeightedDataLoader(unittest.TestCase):
         dataset.append(torch.tensor((8)), 'c')
         dataset.append(torch.tensor((9)), 'c')
 
-        weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2]
-        loader = DataLoader(dataset, sampler=WeightedRandomSampler(weights, 3))
+        weights = [0.1, 0.3, 0.6]
+        batch_size = 5
+        loader = DataLoader(dataset, sampler=WeightedRandomSampler(weights, batch_size), batch_size=batch_size)
 
         for batch, labels in loader:
-            self.assertEqual(len(batch), 1)
-        self.assertEqual(len(loader), 3)
+            self.assertEqual(len(batch), batch_size)
+        self.assertEqual(len(loader), 1)
 
-    def test_batch_weighted_sampler(self):
+    def test_batch_size_with_appendable_dataset(self):
         dataset = AppendableDataset()
 
-        dataset.append(torch.tensor((1)), 'a')
-        dataset.append(torch.tensor((2)), 'a')
-        dataset.append(torch.tensor((3)), 'a')
+        dataset.append(torch.tensor([1]), 'a')
+        dataset.append(torch.tensor([2]), 'a')
+        dataset.append(torch.tensor([3]), 'a')
 
-        dataset.append(torch.tensor((4)), 'b')
-        dataset.append(torch.tensor((5)), 'b')
-        dataset.append(torch.tensor((6)), 'b')
+        dataset.append(torch.tensor([4]), 'b')
+        dataset.append(torch.tensor([5]), 'b')
+        dataset.append(torch.tensor([6]), 'b')
 
-        dataset.append(torch.tensor((7)), 'c')
-        dataset.append(torch.tensor((8)), 'c')
-        dataset.append(torch.tensor((9)), 'c')
+        dataset.append(torch.tensor([7]), 'c')
+        dataset.append(torch.tensor([8]), 'c')
+        dataset.append(torch.tensor([9]), 'c')
 
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2]
-        sampler = WeightedRandomSampler(weights, 3)
-        loader = DataLoader(dataset, sampler=BatchSampler(sampler, batch_size=3, drop_last=False))
+        batch_size = 5
+        sampler = WeightedRandomSampler(weights, batch_size)
+        loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size)
 
-        for batch in loader:
-            # For some reason the batch size ends up being the minimum of num_samples from the weighted sampler and batch_size from BatchSampler
-            self.assertEqual(len(batch), 3)
+        for batch, _ in loader:
+            self.assertEqual(batch.shape[0], batch_size)
         self.assertEqual(len(loader), 1)

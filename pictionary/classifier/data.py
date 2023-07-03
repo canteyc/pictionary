@@ -1,3 +1,5 @@
+import random
+from collections import OrderedDict
 from typing import Union
 
 import torch
@@ -6,42 +8,45 @@ from torch.utils.data import Dataset
 
 class AppendableDataset(Dataset):
     def __init__(self):
-        self._data: list[tuple[torch.Tensor, str]] = list()
+        self._images: list[torch.Tensor] = list()
+        self._labels: list[str] = list()
 
     def __len__(self) -> int:
-        return len(self._data)
+        # Used by dataloader to determine max index for __getitem__
+        return len(self._images)
 
-    def __getitem__(self, item) -> Union[tuple[torch.Tensor, str], list[tuple[torch.Tensor, str]]]:
-        if isinstance(item, int):
-            return self._data[item]
-        elif isinstance(item, list):
-            return [self._data[i] for i in item]
-        else:
-            raise IndexError(f'How do I use {item} as an index?')
+    def size(self):
+        # The number of images in the dataset
+        return len(self)
+
+    def __getitem__(self, item: int) -> tuple[torch.Tensor, str]:
+        return self._images[item], self._labels[item]
 
     def append(self, image: torch.Tensor, label: str) -> 'AppendableDataset':
-        self._data.append((image, label))
+        self._images.append(image)
+        self._labels.append(label)
         return self
 
 
 class BucketDataset(AppendableDataset):
-    def __init__(self):
+    def __init__(self, labels: list[str] = None):
         super().__init__()
-        self._buckets: dict[str, list[torch.Tensor]] = dict()
+        self._buckets: OrderedDict[str, list[torch.Tensor]] = OrderedDict()
+        if labels:
+            # initialize buckets for predetermined labels
+            for key in labels:
+                self._buckets[key] = list()
 
     def __len__(self):
+        return len(self._buckets)
+
+    def size(self):
         return sum([len(bucket) for bucket in self._buckets.values()])
 
-    # TODO: Try changing index to just choose which bucket to pull from, then get a random item from that bucket
     def __getitem__(self, index) -> tuple[torch.Tensor, str]:
-        bucket_index = index
-        for label, bucket in sorted(self._buckets.items()):
-            if bucket_index >= len(bucket):
-                bucket_index -= len(bucket)
-                continue
-
-            return bucket[bucket_index], label
-        raise IndexError(f'{index} not found in BucketDataset with len {len(self)}')
+        key = list(self._buckets.keys())[index]
+        image = random.choice(self._buckets[key])
+        return image, key
 
     def append(self, image: torch.Tensor, label: str) -> 'BucketDataset':
         if label in self._buckets:
