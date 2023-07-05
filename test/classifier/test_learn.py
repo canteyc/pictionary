@@ -1,13 +1,14 @@
+import random
 import unittest
-from typing import Tuple
 
 import torch
 
 from pictionary.classifier.learn import ActiveLearner
+from pictionary.utils import Timer
 
 
 # region Digit images
-def zero() -> Tuple[torch.Tensor, str]:
+def zero() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -43,7 +44,7 @@ def zero() -> Tuple[torch.Tensor, str]:
     ), '0'
 
 
-def one() -> Tuple[torch.Tensor, str]:
+def one() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -79,7 +80,7 @@ def one() -> Tuple[torch.Tensor, str]:
     ), '1'
 
 
-def two() -> Tuple[torch.Tensor, str]:
+def two() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -115,7 +116,7 @@ def two() -> Tuple[torch.Tensor, str]:
     ), '2'
 
 
-def three() -> Tuple[torch.Tensor, str]:
+def three() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -151,7 +152,7 @@ def three() -> Tuple[torch.Tensor, str]:
     ), '3'
 
 
-def four() -> Tuple[torch.Tensor, str]:
+def four() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -187,7 +188,7 @@ def four() -> Tuple[torch.Tensor, str]:
     ), '4'
 
 
-def five() -> Tuple[torch.Tensor, str]:
+def five() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -223,7 +224,7 @@ def five() -> Tuple[torch.Tensor, str]:
     ), '5'
 
 
-def six() -> Tuple[torch.Tensor, str]:
+def six() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -259,7 +260,7 @@ def six() -> Tuple[torch.Tensor, str]:
     ), '6'
 
 
-def seven() -> Tuple[torch.Tensor, str]:
+def seven() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -295,7 +296,7 @@ def seven() -> Tuple[torch.Tensor, str]:
     ), '7'
 
 
-def eight() -> Tuple[torch.Tensor, str]:
+def eight() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -331,7 +332,7 @@ def eight() -> Tuple[torch.Tensor, str]:
     ), '8'
 
 
-def nine() -> Tuple[torch.Tensor, str]:
+def nine() -> tuple[torch.Tensor, str]:
     return torch.tensor(
         data=[
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -365,6 +366,21 @@ def nine() -> Tuple[torch.Tensor, str]:
         ],
         dtype=torch.float32,
     ), '9'
+
+
+def all_digits() -> list[tuple[torch.Tensor, str]]:
+    return [
+            zero(),
+            one(),
+            two(),
+            three(),
+            four(),
+            five(),
+            six(),
+            seven(),
+            eight(),
+            nine(),
+        ]
 # endregion
 
 
@@ -384,6 +400,66 @@ class TestActiveLearner(unittest.TestCase):
         self.learner.add_image(image, label)
 
         self.assertEqual(len(self.learner.test_data.dataset), 1)
+
+    def test_add_images_from_one_class_keeps_ratio(self):
+        for total_images in range(1, 100):
+            self.learner.add_image(*zero())
+            train_size = self.learner.training_data.dataset.size()
+            test_size = self.learner.test_data.dataset.size()
+            self.assertEqual(train_size + test_size, total_images)
+            self.assertLessEqual(train_size / test_size, self.learner._train_test_ratio)
+
+    def test_add_images_evenly_keeps_ratio(self):
+        data = all_digits()
+        for total_images in range(1, 100):
+            self.learner.add_image(*data[total_images % 10])
+            train_size = self.learner.training_data.dataset.size()
+            test_size = self.learner.test_data.dataset.size()
+            self.assertEqual(train_size + test_size, total_images)
+            self.assertLessEqual(train_size / test_size, self.learner._train_test_ratio)
+
+    def test_add_images_unevenly_keeps_ratio(self):
+        data = all_digits()
+        # add more low numbers than high numbers
+        new_data_rates = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+        for total_images in range(1, 1_000):
+            next_image = random.choices(data, weights=new_data_rates)[0]
+            self.learner.add_image(*next_image)
+            train_size = self.learner.training_data.dataset.size()
+            test_size = self.learner.test_data.dataset.size()
+            self.assertEqual(train_size + test_size, total_images)
+            self.assertLessEqual(train_size / test_size, self.learner._train_test_ratio)
+
+    def test_add_images_ratio_applies_to_each_class_separately(self):
+        # shorter name for these functions
+        train_size = self.learner.training_data.dataset.size
+        test_size = self.learner.test_data.dataset.size
+
+        def add_to_test(data):
+            train_size_before = train_size()
+            test_size_before = test_size()
+            self.learner.add_image(*data)
+            self.assertEqual(train_size_before, train_size())
+            self.assertEqual(test_size_before + 1, test_size())
+
+        def add_to_train(data):
+            train_size_before = train_size()
+            test_size_before = test_size()
+            self.learner.add_image(*data)
+            self.assertEqual(train_size_before + 1, train_size())
+            self.assertEqual(test_size_before, test_size())
+
+        # add a few ones
+        for _ in range(10):
+            self.learner.add_image(*one())
+
+        # now start adding twos and make sure they go to the right dataset
+        for _ in range(5):
+            add_to_test(two())
+            add_to_train(two())
+            add_to_train(two())
+            add_to_train(two())
+            add_to_train(two())
 
     def test_learn_zero(self):
         image, label = zero()
@@ -532,24 +608,15 @@ class TestActiveLearner(unittest.TestCase):
 
     def test_learns_all_digits(self):
         # TODO: failing
-        all_digits = [
-            one(),
-            two(),
-            three(),
-            four(),
-            five(),
-            six(),
-            seven(),
-            eight(),
-            nine(),
-        ]
+        data = all_digits()
         for _ in range(2):
             # Add each image 4 times
-            for image, label in all_digits:
+            for image, label in data:
                 self.learner.add_image(image, label)
 
-        # for e in (1, 10, 100, 1_000):
-        #     loss = self.learner.train(num_epochs=e)
-        #     print(f'{sum(self.learner.accuracy())}, {loss}')
-        for image, label in all_digits:
+        for e in (1, 10, 100, 1_000):
+            with Timer():
+                loss = self.learner.train(num_epochs=e)
+            print(f'{sum(self.learner.accuracy())}')
+        for image, label in data:
             self.assertEqual(self.learner.classify(image.unsqueeze(0)), label)

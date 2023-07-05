@@ -1,3 +1,4 @@
+from operator import getitem
 from typing import List
 
 import torch
@@ -15,7 +16,7 @@ class ActiveLearner:
         weighted_sampler = WeightedRandomSampler([0.] * len(self.class_labels), batch_size)
         self.weights = weighted_sampler.weights
         self.training_data = DataLoader(BucketDataset(self.class_labels), sampler=weighted_sampler, batch_size=batch_size)
-        self.test_data = DataLoader(AppendableDataset())
+        self.test_data = DataLoader(BucketDataset(self.class_labels, 'sequential'))
 
         self._train_test_ratio = train_test_ratio  # number of train samples vs test samples
         self._loss_function = torch.nn.NLLLoss()
@@ -27,7 +28,8 @@ class ActiveLearner:
             raise KeyError(f'{label} not in {self.class_labels}')
 
         image = self.reshape(image)
-        if self.test_data.dataset.size() == 0 or self.training_data.dataset.size() / self.test_data.dataset.size() > self._train_test_ratio:
+        if self.test_data.dataset.size(label) == 0 \
+                or self.training_data.dataset.size(label) / self.test_data.dataset.size(label) >= self._train_test_ratio:
             self.test_data.dataset.append(image, label)
         else:
             self.training_data.dataset.append(image, label)
