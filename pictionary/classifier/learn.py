@@ -1,10 +1,7 @@
-from operator import getitem
-from typing import List
-
 import torch
-from torch.utils.data import DataLoader, WeightedRandomSampler, BatchSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from .data import AppendableDataset, BucketDataset
+from .data import BucketDataset
 from .model import LeNet
 
 

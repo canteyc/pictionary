@@ -399,7 +399,7 @@ class TestActiveLearner(unittest.TestCase):
 
         self.learner.add_image(image, label)
 
-        self.assertEqual(len(self.learner.test_data.dataset), 1)
+        self.assertEqual(self.learner.test_data.dataset.size(), 1)
 
     def test_add_images_from_one_class_keeps_ratio(self):
         for total_images in range(1, 100):
@@ -606,17 +606,17 @@ class TestActiveLearner(unittest.TestCase):
 
         self.assertTrue(all(actual_weights == expected_weights))
 
+    # @unittest.skip
     def test_learns_all_digits(self):
-        # TODO: failing
         data = all_digits()
         for _ in range(2):
-            # Add each image 4 times
+            # Add each image 2 times
             for image, label in data:
                 self.learner.add_image(image, label)
 
-        for e in (1, 10, 100, 1_000):
-            with Timer():
-                loss = self.learner.train(num_epochs=e)
-            print(f'{sum(self.learner.accuracy())}')
+        self.learner.train(num_epochs=12)  # minimum epochs to get 100% accuracy
+
+        print(self.learner.accuracy())
+
         for image, label in data:
             self.assertEqual(self.learner.classify(image.unsqueeze(0)), label)

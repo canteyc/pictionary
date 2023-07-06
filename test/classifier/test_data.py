@@ -1,7 +1,7 @@
 import unittest
 
 import torch
-from torch.utils.data import DataLoader, WeightedRandomSampler, BatchSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from pictionary.classifier.data import BucketDataset, AppendableDataset
 
