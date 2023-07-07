@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from pictionary.classifier.learn import ActiveLearner
+from pictionary.classifier.learn import ActiveLearner, digit_learner
 from pictionary.utils import Timer
 
 
@@ -388,7 +388,7 @@ class TestActiveLearner(unittest.TestCase):
 
     def setUp(self) -> None:
         torch.manual_seed(1)
-        self.learner = ActiveLearner.digit_learner()
+        self.learner = digit_learner()
 
     def test_add_wrong_label(self):
         self.assertRaises(KeyError, self.learner.add_image, torch.Tensor(), 'does not exist')

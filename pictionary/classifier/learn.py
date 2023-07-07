@@ -51,6 +51,9 @@ class ActiveLearner:
         self.weights[:] = 1. - accuracy
 
     def train(self, num_epochs: int = 10):
+        if self.training_data.dataset.size() == 0:
+            return
+
         self._reset_training_sampler()
 
         self.model.train()
@@ -69,11 +72,11 @@ class ActiveLearner:
         return self._loss_record[-num_epochs:]
 
     @staticmethod
-    def digit_learner():
-        return ActiveLearner(LeNet(1, 10), [str(num) for num in range(10)])
-
-    @staticmethod
     def reshape(image: torch.Tensor) -> torch.Tensor:
         if len(image.shape) < 3:
             image = image.unsqueeze(0)
         return image
+
+
+def digit_learner():
+        return ActiveLearner(LeNet(1, 10), [str(num) for num in range(10)])
