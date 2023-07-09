@@ -1,3 +1,7 @@
+import datetime
+import os
+from typing import Callable, Optional
+
 from kivy.graphics import Line
 import torch
 from torchvision.transforms.functional import gaussian_blur
@@ -9,7 +13,9 @@ MNIST_SIZE = 28
 RADIUS = torch.sqrt(torch.tensor(2))
 
 
-def line_to_image(line: Line) -> torch.Tensor:
+def line_to_image(line: Line) -> Optional[torch.Tensor]:
+    if not line.points:
+        return None
     points_tensor = torch.tensor(line.points)
     num_points = len(line.points) // 2
     points_tensor = points_tensor.resize(num_points, 2)
@@ -52,15 +58,43 @@ def line_to_image(line: Line) -> torch.Tensor:
 
 
 class Agent:
-    def __init__(self, set_text):
+    data_folder = f'../data'
+
+    def __init__(self, set_text: Callable[[str], None]):
         self._brain = digit_learner()
         self.answer = None
         self.set_text = set_text
+        self._load_data_from_disk()
 
-    def store_image(self, drawing: Line):
-        label = '0'  # request label from user
+    def store_image(self, drawing: Line, label: str):
         image = line_to_image(drawing)
+        if image is None:
+            return
+        self.answer = self._send_to_model(image, label)
+        self.set_text(f'This looks like a {self.answer}')
+        self._save_to_disk(image, label)
+
+    def accuracy(self, obj):
+        accuracy_as_str_list = ''.join(f'{str(number):>7s}' for number in self._brain.accuracy().tolist())
+        labels = ''.join(f'{label:>7s}' for label in self._brain.class_labels)
+        self.set_text(f'{labels}\n{accuracy_as_str_list}')
+
+    def _send_to_model(self, image: torch.Tensor, label: str) -> str:
         self._brain.add_image(image, label)
         self._brain.train()
         self.answer = self._brain.classify(image)
-        self.set_text(self.answer)
+        return self.answer
+
+    @staticmethod
+    def _save_to_disk(image: torch.Tensor, label: str):
+        date = datetime.datetime.now()
+        timestamp = str(date).replace(' ', '-').replace(':', '-').replace('.', '-')
+        filepath = f'{Agent.data_folder}/{timestamp}_{label}.pt'
+        torch.save(image, filepath)
+
+    def _load_data_from_disk(self):
+        all_data = list(os.listdir(Agent.data_folder))
+        for file in sorted(all_data):
+            image = torch.load(f'{Agent.data_folder}/{file}')
+            label = file.split('_')[-1].split('.')[0]
+            self._brain.add_image(image, label)

@@ -49,12 +49,19 @@ class ActiveLearner:
     def _reset_training_sampler(self):
         accuracy = self.accuracy(no_data_value=1)
         self.weights[:] = 1. - accuracy
+        for i, label in enumerate(self.class_labels):
+            if self.training_data.dataset.size(label) == 0:
+                self.weights[i] = 0
 
     def train(self, num_epochs: int = 10):
         if self.training_data.dataset.size() == 0:
             return
 
         self._reset_training_sampler()
+
+        if sum(self.weights) == 0:
+            print(f'Error: All class weights are 0!')
+            return
 
         self.model.train()
         for epoch in range(num_epochs):

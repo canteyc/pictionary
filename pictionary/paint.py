@@ -6,9 +6,9 @@ from kivy.uix.widget import Widget
 
 
 class PaintWidget(Widget):
-    def __init__(self, callback: Callable[[Line], None], **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.send_line = callback
+        self._line = Line()
 
     def on_touch_down(self, touch):
         color = (random(), random(), random())
@@ -25,5 +25,9 @@ class PaintWidget(Widget):
 
     def on_touch_up(self, touch):
         if 'line' in touch.ud:
-            self.send_line(touch.ud['line'])
-            image = self.export_as_image()
+            self._line.points += touch.ud['line'].points
+
+    def pop_line(self):
+        line = self._line
+        self._line = Line()
+        return line
